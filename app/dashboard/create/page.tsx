@@ -124,17 +124,14 @@ export default function CreateExperience() {
         type: videoFile.type
       })
       
-      // Use streaming upload for video (multipart/form-data)
-      const maxVideoMB = 100;
+      // Upload video to Supabase storage (multipart/form-data)
+      const maxVideoMB = 100
       if (videoFile.size > maxVideoMB * 1024 * 1024) {
-        throw new Error(`Video file too large. Maximum size is ${maxVideoMB}MB.`);
+        throw new Error(`Video file too large. Maximum size is ${maxVideoMB}MB.`)
       }
-      const videoForm = new FormData();
-      videoForm.append('file', videoFile);
-      videoForm.append('fileType', 'video');
-      videoForm.append('fileName', videoFile.name);
-      videoForm.append('contentType', videoFile.type);
-      const videoResponse = await fetch('/api/upload/r2-streaming/', {
+      const videoForm = new FormData()
+      videoForm.append('file', videoFile)
+      const videoResponse = await fetch('/api/upload/video', {
         method: 'POST',
         body: videoForm
       })
@@ -147,27 +144,18 @@ export default function CreateExperience() {
       const videoData = await videoResponse.json()
       console.log('✅ Video uploaded successfully:', videoData.url)
 
-      // Upload mind file using base64
+      // Upload mind file to Supabase storage
       console.log('📤 Uploading mind file:', {
         name: mindFile.name,
         size: mindFile.size,
         type: mindFile.type
       })
       
-      // Convert file to base64
-      const mindBase64 = await fileToBase64(mindFile)
-      
-      const mindResponse = await fetch('/api/upload/r2-base64/', {
+      const mindForm = new FormData()
+      mindForm.append('file', mindFile)
+      const mindResponse = await fetch('/api/upload/mind', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          fileName: mindFile.name,
-          fileType: 'mind',
-          contentType: mindFile.type,
-          base64Data: mindBase64
-        })
+        body: mindForm
       })
 
       if (!mindResponse.ok) {
@@ -204,7 +192,7 @@ export default function CreateExperience() {
       toast.success('AR experience created successfully!')
       
       // Redirect to the new experience
-      router.push(`/dashboard/experiences/${newExperience.id}`)
+      router.push(`/experience/${newExperience.id}`)
 
     } catch (error) {
       console.error('❌ Error creating AR experience:', error)
