@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-const supabase = createClient(supabaseUrl, serviceKey, {
-  auth: { persistSession: false }
-})
+// Enable mock mode to bypass Supabase storage for quick local testing
+// Set MOCK_UPLOADS=1 (or true) in .env.local to activate
+const isMock = (process.env.MOCK_UPLOADS || '').toLowerCase() === '1' || (process.env.MOCK_UPLOADS || '').toLowerCase() === 'true'
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +24,22 @@ export async function POST(request: NextRequest) {
     if (buffer.length < 1000) {
       return NextResponse.json({ error: 'Invalid .mind file. File is too small.' }, { status: 400 })
     }
+
+    // In mock mode, skip storage and return a fake URL
+    if (isMock) {
+      const safePath = path.replace(/[^a-zA-Z0-9._/-]/g, '_')
+      return NextResponse.json({ success: true, url: `https://mock.local/uploads/mind-files/${safePath}`, path: safePath })
+    }
+
+    // Create Supabase client lazily to avoid requiring envs in mock mode
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!supabaseUrl || !serviceKey) {
+      return NextResponse.json({ error: 'Supabase configuration missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY).' }, { status: 500 })
+    }
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    })
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('mind-files')
